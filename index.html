@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>IMDB</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="main-interface"></div>
+
+<script type="text/babel">
+
+    /* ... kallas för spread syntax och används i denna 
+    kod den gör möjligt att snabbt och enkelt kopiera,
+    lägga till eller sammanfoga array/objekt/egenskaper */
+
+    "use strict";
+
+  const { useState } = React; // Tillåter CRUD operationer
+  const { createRoot } = ReactDOM; // Används för att rendera huvudkomponenten i div-elementet
+
+  // Huvudkomponenten för rendering av film gränssnittet
+  const MovieDatabase = () => {
+    
+    const [movies, setMovies] = useState([{ // Läs, skriv
+        id: 1,
+        title: 'The Shawshank Redemption',
+        year: 1994,
+        rating: 9.3
+    },
+    {
+        id: 2,
+        title: 'The Godfather',
+        year: 1972,
+        rating: 9.2
+    },
+    {
+        id: 3,
+        title: 'The Dark Knight',
+        year: 2008,
+        rating: 9.0
+    }]); 
+
+    // prop: Lägg till film (passeras genom 'MovieForm' subkomponent)
+    const addMovie = (title, year, rating) => {
+      const newMovie = {
+        id: movies.length + 1, // != 0
+        title,
+        year,
+        rating,
+      };
+      setMovies([...movies, newMovie]); // Spread syntax ... , här skapas en ny array med alla gamla OCH nya filmer, den 'sprider'
+    };
+
+    // prop: Radera film (passeras genom 'MovieList' subkomponent)
+    const removeMovie = (id) => {
+      const updatedMovies = movies.filter(movie => movie.id !== id); // Filtrera alla förutom den valda filmen
+      setMovies(updatedMovies);
+    };
+
+    // inte prop, passeras ej i komponent
+    const editMovie = (id, updatedMovie) => {
+      const updatedMovies = movies.map(movie =>
+        movie.id === id ? { ...movie, ...updatedMovie } : movie // Redigera valda
+      );
+      setMovies(updatedMovies);
+    };
+
+    /* Subkomponent för rendering av 'lägg till' formen,
+    ´useState´ hanterar inmatningsvärdena */
+    const MovieForm = ({ addMovie }) => {
+      const [title, setTitle] = useState('');
+      const [year, setYear] = useState('');
+      const [rating, setRating] = useState('');
+
+      // Hantering när man submittar (e = event)
+      const handleSubmit = (e) => {
+        e.preventDefault(); // reloada inte sidan
+
+        // Lägg till sen reset
+        if (title && year && rating) {
+          addMovie(title, parseInt(year), parseFloat(rating));
+          setTitle('');
+          setYear('');
+          setRating('');
+        }
+      };
+
+      // 'Lägg till' formen (onChange = när textlådan förändras, tilldela dess värde)
+      return (
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Titel"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+          <input
+            type="number"
+            placeholder="År"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+          />
+          <input
+            type="number"
+            placeholder="Betyg"
+            value={rating}
+            step="0.1"
+            onChange={(e) => setRating(e.target.value)}
+          />
+          <button type="submit">Lägg till film</button>
+        </form>
+      );
+    };
+
+    /* Subkomponent för rendering av filmlistan och
+    deras respektive knappar (ta bort, redigera) samt 
+    hantering av redigering med hjälp av ´useStates´ */
+    const MovieList = ({ movies, removeMovie }) => {
+      const [editId, setEditId] = useState(null);
+      const [editTitle, setEditTitle] = useState('');
+      const [editYear, setEditYear] = useState('');
+      const [editRating, setEditRating] = useState('');
+
+      // Tar värden av den filmen som ska redigeras (tar dens 'state')
+      const handleEdit = (id, title, year, rating) => {
+        setEditId(id);
+        setEditTitle(title);
+        setEditYear(year.toString());
+        setEditRating(rating.toString());
+      };
+
+      // Exekverar editMovie() funktionen sen reset
+      const handleUpdate = () => {
+        editMovie(editId, {
+          title: editTitle,
+          year: parseInt(editYear),
+          rating: parseFloat(editRating)
+        });
+        setEditId(null);
+        setEditTitle('');
+        setEditYear('');
+        setEditRating('');
+      };
+
+      // Redigeringsformen för den filmen som ska redigeras
+      return (
+        <div>
+          <ol>
+            {movies.map((movie) => (
+              <li key={movie.id}>
+                {editId === movie.id ? (
+                  <div>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                    />
+                    <input
+                      type="number"
+                      value={editYear}
+                      onChange={(e) => setEditYear(e.target.value)}
+                    />
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={editRating}
+                      onChange={(e) => setEditRating(e.target.value)}
+                    />
+                    <button onClick={handleUpdate}>Uppdatera</button>
+                  </div>
+                ) : (
+                  <div>
+                    {movie.title} - {movie.year} - Betyg: {movie.rating}
+                    <button onClick={() => removeMovie(movie.id)}>Ta bort</button>
+                    <button onClick={() => handleEdit(movie.id, movie.title, movie.year, movie.rating)}>Redigera</button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      );
+    };
+
+    // Tilldela till div, packa upp
+    return (
+      <div>
+        <h1>Film databas</h1>
+        <MovieForm addMovie={addMovie} />
+        <MovieList movies={movies} removeMovie={removeMovie} />
+      </div>
+    );
+  };
+
+  // Faktiskt rendera allt (gränssnittet)
+  const container = document.getElementById('main-interface');
+  const root = ReactDOM.createRoot(container);
+  root.render(<MovieDatabase />);
+</script>
+
+</body>
+</html>
